@@ -33,7 +33,7 @@ $shutDownCodeCoverage();
 
 Make sure to modify the call to `RemoteCodeCoverage::bootstrap()` if needed:
 
-1. Provide your own logic to determine if code coverage should be enabled in the first place (this example uses an environment variable for that).
+1. Provide your own logic to determine if code coverage should be enabled in the first place (this example uses an environment variable for that). This is important for security reasons. It helps you make sure that the production server won't expose any collected coverage data.
 2. Provide your own directory for storing the coverage data files (`.cov`).
 3. Provide the path to your own `phpunit.xml(.dist)` file. This file is only used for its [code coverage filter configuration](https://phpunit.de/manual/current/en/appendixes.configuration.html#appendixes.configuration.whitelisting-files).
 
