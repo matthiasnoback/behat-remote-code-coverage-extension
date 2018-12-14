@@ -6,5 +6,6 @@ services:
             - '%mink.default_session%'
             - '%mink.base_url%'
             - '%remote_code_coverage.target_directory%'
+            - '%remote_code_coverage.split_by%'
         tags:
             - { name: event_dispatcher.subscriber }

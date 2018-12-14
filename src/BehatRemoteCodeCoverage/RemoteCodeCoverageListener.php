@@ -7,6 +7,8 @@ use Behat\Mink\Session;
 use RuntimeException;
 use SebastianBergmann\CodeCoverage\CodeCoverage;
 use Webmozart\Assert\Assert;
+use Behat\Behat\EventDispatcher\Event\AfterFeatureTested;
+use Behat\Behat\EventDispatcher\Event\FeatureTested;
 use Behat\Behat\EventDispatcher\Event\ScenarioLikeTested;
 use Behat\Behat\EventDispatcher\Event\ScenarioTested;
 use Behat\Mink\Mink;
@@ -27,6 +29,11 @@ final class RemoteCodeCoverageListener implements EventSubscriberInterface
      * @var string
      */
     private $targetDirectory;
+
+    /**
+     * @var string
+     */
+    private $splitBy = 'suite';
 
     /**
      * @var string
@@ -53,7 +60,7 @@ final class RemoteCodeCoverageListener implements EventSubscriberInterface
      */
     private $minkSession;
 
-    public function __construct(Mink $mink, $defaultMinkSession, $baseUrl, $targetDirectory)
+    public function __construct(Mink $mink, $defaultMinkSession, $baseUrl, $targetDirectory, $splitBy)
     {
         $this->mink = $mink;
 
@@ -65,6 +72,9 @@ final class RemoteCodeCoverageListener implements EventSubscriberInterface
 
         Assert::string($targetDirectory, 'Coverage target directory should be a string');
         $this->targetDirectory = $targetDirectory;
+
+        Assert::string($splitBy, 'Split coverage files by should be a string');
+        $this->splitBy = $splitBy;
     }
 
     public static function getSubscribedEvents()
@@ -72,6 +82,7 @@ final class RemoteCodeCoverageListener implements EventSubscriberInterface
         return [
             SuiteTested::BEFORE => 'beforeSuite',
             ScenarioTested::BEFORE => 'beforeScenario',
+            FeatureTested::AFTER => 'afterFeature',
             SuiteTested::AFTER => 'afterSuite'
         ];
     }
@@ -103,25 +114,25 @@ final class RemoteCodeCoverageListener implements EventSubscriberInterface
         $this->getMinkSession()->setCookie('coverage_id', $coverageId);
     }
 
+    public function afterFeature(AfterFeatureTested $event)
+    {
+        if (!$this->coverageEnabled || 'feature' !== $this->splitBy) {
+            return;
+        }
+
+        $parts = pathinfo($event->getFeature()->getFile());
+        Storage::storeCodeCoverage($this->getCoverage(), $this->targetDirectory, sprintf('%s-%s', basename($parts['dirname']), $parts['filename']));
+    }
+
     public function afterSuite(AfterSuiteTested $event)
     {
         if (!$this->coverageEnabled) {
             return;
         }
 
-        $requestUrl = $this->baseUrl . '/?export_code_coverage=true&coverage_group=' . urlencode($this->coverageGroup);
-        $response = file_get_contents($requestUrl);
-        $coverage = unserialize($response);
-
-        if (!$coverage instanceof CodeCoverage) {
-            throw new RuntimeException(sprintf(
-                'The response for "%s" did not contain a serialized CodeCoverage object: %s',
-                $requestUrl,
-                $response
-            ));
+        if ('suite' === $this->splitBy) {
+            Storage::storeCodeCoverage($this->getCoverage(), $this->targetDirectory, $event->getSuite()->getName());
         }
-
-        Storage::storeCodeCoverage($coverage, $this->targetDirectory, $event->getSuite()->getName());
 
         $this->reset();
     }
@@ -138,5 +149,26 @@ final class RemoteCodeCoverageListener implements EventSubscriberInterface
     private function getMinkSession()
     {
         return $this->mink->getSession($this->minkSession);
+    }
+
+    /**
+     * @return mixed
+     * @throws RuntimeException
+     */
+    private function getCoverage()
+    {
+        $requestUrl = $this->baseUrl . '/?export_code_coverage=true&coverage_group=' . urlencode($this->coverageGroup);
+        $response = file_get_contents($requestUrl);
+        $coverage = unserialize($response);
+
+        if (!$coverage instanceof CodeCoverage) {
+            throw new RuntimeException(sprintf(
+                'The response for "%s" did not contain a serialized CodeCoverage object: %s',
+                $requestUrl,
+                $response
+            ));
+        }
+
+        return $coverage;
     }
 }
