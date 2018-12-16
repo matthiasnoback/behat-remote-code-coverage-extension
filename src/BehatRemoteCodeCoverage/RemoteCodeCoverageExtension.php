@@ -33,6 +33,10 @@ final class RemoteCodeCoverageExtension implements Extension
                     ->isRequired()
                     ->info('The directory where the generated coverage files should be stored.')
                 ->end()
+                ->scalarNode('split_by')
+                    ->defaultValue('suite')
+                    ->info('The strategy to save/split coverage files by (suite or feature).')
+                ->end()
             ->end();
     }
 
@@ -42,5 +46,6 @@ final class RemoteCodeCoverageExtension implements Extension
         $loader->load('services.yml');
 
         $container->setParameter('remote_code_coverage.target_directory', $config['target_directory']);
+        $container->setParameter('remote_code_coverage.split_by', $config['split_by']);
     }
 }
