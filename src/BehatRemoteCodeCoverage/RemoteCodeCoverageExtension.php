@@ -33,9 +33,10 @@ final class RemoteCodeCoverageExtension implements Extension
                     ->isRequired()
                     ->info('The directory where the generated coverage files should be stored.')
                 ->end()
-                ->scalarNode('split_by')
+                ->enumNode('split_by')
                     ->defaultValue('suite')
-                    ->info('The strategy to save/split coverage files by (suite or feature).')
+                    ->values(['suite', 'feature', 'scenario'])
+                    ->info('The strategy to save/split coverage files by (suite, feature or scenario).')
                 ->end()
             ->end();
     }
