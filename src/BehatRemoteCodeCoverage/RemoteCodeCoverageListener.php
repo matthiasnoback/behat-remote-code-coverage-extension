@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace BehatRemoteCodeCoverage;
 
+use Behat\Behat\EventDispatcher\Event\AfterScenarioTested;
 use Behat\Mink\Session;
 use RuntimeException;
 use SebastianBergmann\CodeCoverage\CodeCoverage;
@@ -82,6 +83,7 @@ final class RemoteCodeCoverageListener implements EventSubscriberInterface
         return [
             SuiteTested::BEFORE => 'beforeSuite',
             ScenarioTested::BEFORE => 'beforeScenario',
+            ScenarioTested::AFTER => 'afterScenario',
             FeatureTested::AFTER => 'afterFeature',
             SuiteTested::AFTER => 'afterSuite'
         ];
@@ -112,6 +114,16 @@ final class RemoteCodeCoverageListener implements EventSubscriberInterface
         $this->getMinkSession()->setCookie('collect_code_coverage', true);
         $this->getMinkSession()->setCookie('coverage_group', $this->coverageGroup);
         $this->getMinkSession()->setCookie('coverage_id', $coverageId);
+    }
+
+    public function afterScenario(AfterScenarioTested $event)
+    {
+        if (!$this->coverageEnabled || 'scenario' !== $this->splitBy) {
+            return;
+        }
+
+        $parts = pathinfo($event->getFeature()->getFile());
+        Storage::storeCodeCoverage($this->getCoverage(), $this->targetDirectory, sprintf('%s-%s_%s', basename($parts['dirname']), $parts['filename'], $event->getNode()->getLine()));
     }
 
     public function afterFeature(AfterFeatureTested $event)
