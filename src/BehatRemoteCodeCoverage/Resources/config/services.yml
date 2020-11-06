@@ -3,7 +3,6 @@ services:
         class: BehatRemoteCodeCoverage\RemoteCodeCoverageListener
         arguments:
             - '@mink'
-            - '%mink.default_session%'
             - '%mink.base_url%'
             - '%remote_code_coverage.target_directory%'
             - '%remote_code_coverage.split_by%'

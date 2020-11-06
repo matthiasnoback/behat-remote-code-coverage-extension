@@ -49,24 +49,11 @@ final class RemoteCodeCoverageListener implements EventSubscriberInterface
     /**
      * @var string
      */
-    private $defaultMinkSession;
-
-    /**
-     * @var string
-     */
     private $baseUrl;
 
-    /**
-     * @var string
-     */
-    private $minkSession;
-
-    public function __construct(Mink $mink, $defaultMinkSession, $baseUrl, $targetDirectory, $splitBy)
+    public function __construct(Mink $mink, $baseUrl, $targetDirectory, $splitBy)
     {
         $this->mink = $mink;
-
-        Assert::string($defaultMinkSession, 'Default Mink session should be a string');
-        $this->defaultMinkSession = $defaultMinkSession;
 
         Assert::string($baseUrl);
         $this->baseUrl = $baseUrl;
@@ -98,8 +85,6 @@ final class RemoteCodeCoverageListener implements EventSubscriberInterface
             return;
         }
 
-        $this->minkSession = $event->getSuite()->hasSetting('mink_session') ?
-            $event->getSuite()->getSetting('mink_session') : $this->defaultMinkSession;
         $this->coverageGroup = uniqid($event->getSuite()->getName(), true);
     }
 
@@ -111,9 +96,15 @@ final class RemoteCodeCoverageListener implements EventSubscriberInterface
 
         $coverageId = $event->getFeature()->getFile() . ':' . $event->getNode()->getLine();
 
-        $this->getMinkSession()->setCookie('collect_code_coverage', true);
-        $this->getMinkSession()->setCookie('coverage_group', $this->coverageGroup);
-        $this->getMinkSession()->setCookie('coverage_id', $coverageId);
+        $minkSession = $this->mink->getSession();
+
+        if (!$minkSession->isStarted()) {
+            $minkSession->start();
+        }
+
+        $minkSession->setCookie('collect_code_coverage', true);
+        $minkSession->setCookie('coverage_group', $this->coverageGroup);
+        $minkSession->setCookie('coverage_id', $coverageId);
     }
 
     public function afterScenario(AfterScenarioTested $event)
@@ -153,14 +144,6 @@ final class RemoteCodeCoverageListener implements EventSubscriberInterface
     {
         $this->coverageGroup = null;
         $this->coverageEnabled = false;
-    }
-
-    /**
-     * @return Session
-     */
-    private function getMinkSession()
-    {
-        return $this->mink->getSession($this->minkSession);
     }
 
     /**
