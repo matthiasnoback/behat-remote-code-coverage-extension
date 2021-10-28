@@ -38,6 +38,10 @@ final class RemoteCodeCoverageExtension implements Extension
                     ->values(['suite', 'feature', 'scenario'])
                     ->info('The strategy to save/split coverage files by (suite, feature or scenario).')
                 ->end()
+                ->scalarNode('base_url')
+                    ->defaultNull()
+                    ->info('The base url of the php application, leave null to use mink base url.')
+                ->end()
             ->end();
     }
 
@@ -48,5 +52,6 @@ final class RemoteCodeCoverageExtension implements Extension
 
         $container->setParameter('remote_code_coverage.target_directory', $config['target_directory']);
         $container->setParameter('remote_code_coverage.split_by', $config['split_by']);
+        $container->setParameter('remote_code_coverage.base_url', $config['base_url'] ?: '%mink.base_url%');
     }
 }
